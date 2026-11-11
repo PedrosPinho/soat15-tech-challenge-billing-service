@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: billing-service-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oficina
+      POSTGRES_PASSWORD: senha123
+      POSTGRES_DB: oficina_billing
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - oficina-network
+    healthcheck:
+      test: pg_isready -U oficina -d oficina_billing
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: billing-service-localstack
+    restart: unless-stopped
+    ports:
+      - '4566:4566'
+    environment:
+      SERVICES: sqs,sns
+      AWS_DEFAULT_REGION: us-east-1
+    networks:
+      - oficina-network
+    healthcheck:
+      test: awslocal sqs list-queues
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: billing-service
+    restart: unless-stopped
+    ports:
+      - '3003:3001'
+    command: sh -c "npm run db:migrate && node dist/index.js"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgres://oficina:senha123@postgres:5432/oficina_billing
+      JWT_SECRET: change-this-in-production
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - oficina-network
+
+networks:
+  oficina-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: billing-service_postgres_data
+    driver: local

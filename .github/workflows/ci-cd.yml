@@ -1,0 +1,80 @@
+name: CI
+
+# Esqueleto (Fase 4, Etapa 1): build + testes. SonarCloud, Terraform, build/push no ECR e
+# deploy no EKS entram na Etapa 8 (ver PHASE_4_PLAN.md no repo soat15-tech-challenge-01).
+# Os nomes dos jobs (`Build`, `Test`) são os status checks obrigatórios da branch protection.
+
+on:
+  push:
+    branches: [main, homolog]
+  pull_request:
+    branches: [main, homolog]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: oficina
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: oficina_billing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U oficina -d oficina_billing"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://oficina:ci-password@localhost:5432/oficina_billing
+      JWT_SECRET: ci-test-jwt-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run tests with coverage (threshold 80%)
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:coverage | tee coverage-output.txt
+      - name: Publish coverage summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Cobertura de testes'
+            echo '```'
+            tail -n 40 coverage-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
