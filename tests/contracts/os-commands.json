@@ -1,0 +1,117 @@
+[
+  {
+    "messageId": "<uuid-1>",
+    "type": "SolicitarDiagnostico",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "numeroOS": "OS-20261111-0001",
+      "clienteId": "cli-1",
+      "veiculoId": "v-1",
+      "placa": "ABC1D23",
+      "prioridade": "NORMAL"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "GerarOrcamento",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "numeroOS": "OS-20261111-0001",
+      "cliente": {
+        "id": "cli-1",
+        "nome": "Maria",
+        "email": "m@x.com",
+        "cpfCnpj": "12345678909"
+      },
+      "itens": [
+        {
+          "tipo": "SERVICO",
+          "referenciaId": "<uuid-2>",
+          "descricao": "Troca de amortecedor",
+          "quantidade": 1,
+          "valorUnitario": 250
+        },
+        {
+          "tipo": "PECA",
+          "referenciaId": "peca-1",
+          "descricao": "Amortecedor",
+          "quantidade": 2,
+          "valorUnitario": 180
+        }
+      ],
+      "valorTotal": 610,
+      "validadeAte": "2026-11-18T12:00:00.000Z"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "SolicitarPagamento",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "orc-1"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "IniciarReparo",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "execucaoId": "ex-1"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "EstornarPagamento",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "pagamentoId": "pg-1",
+      "motivo": "motor fundido"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "CancelarOrcamento",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "orc-1",
+      "motivo": "motor fundido"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "CancelarExecucao",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "execucaoId": "ex-1",
+      "motivo": "motor fundido"
+    }
+  }
+]

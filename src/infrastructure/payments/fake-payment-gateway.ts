@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import {
   CriarPreferenciaInput,
   Estorno,
@@ -18,6 +17,7 @@ export class FakePaymentGateway implements IPaymentGateway {
   readonly pagamentos = new Map<string, PagamentoGateway>();
   readonly estornos = new Map<string, Estorno>();
   falharProximaChamada?: Error;
+  private sequencia = 0;
   chamadas = { criarPreferencia: 0, consultarPagamento: 0, estornar: 0 };
 
   async criarPreferencia(input: CriarPreferenciaInput): Promise<Preferencia> {
@@ -25,7 +25,7 @@ export class FakePaymentGateway implements IPaymentGateway {
     this.lancarSeFalha();
     const existente = this.preferencias.get(input.idempotencyKey);
     if (existente) return { preferenceId: existente.preferenceId, initPoint: existente.initPoint };
-    const preferenceId = `pref-${randomUUID().slice(0, 8)}`;
+    const preferenceId = `pref-${++this.sequencia}`;
     const pref = {
       preferenceId,
       initPoint: `https://fake.mercadopago.test/checkout/${preferenceId}`,
@@ -53,7 +53,7 @@ export class FakePaymentGateway implements IPaymentGateway {
     const pagamento = this.pagamentos.get(mpPaymentId);
     if (!pagamento)
       throw new PaymentGatewayError(`Pagamento ${mpPaymentId} inexistente no gateway`);
-    const estorno = { refundId: `refund-${randomUUID().slice(0, 8)}` };
+    const estorno = { refundId: `refund-${++this.sequencia}` };
     this.estornos.set(idempotencyKey, estorno);
     pagamento.status = 'refunded';
     return estorno;
