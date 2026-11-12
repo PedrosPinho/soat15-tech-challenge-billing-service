@@ -55,6 +55,27 @@ mensagens e pelas rotas `/internal/*`.
 
 Swagger em `/api/orcamentos/docs` (JSON em `/api/orcamentos/docs.json`). Healthchecks: `GET /health/live`, `GET /health/ready`.
 
+## Posição na solução
+
+```mermaid
+flowchart LR
+  MP[(Mercado Pago)] -- "webhook assinado" --> APIGW[API Gateway] --> ALB[ALB interno] --> BI
+  Cliente([Cliente]) --> APIGW
+  OS[OS Service<br/>orquestrador] -- "GerarOrcamento · CancelarOrcamento<br/>SolicitarPagamento · EstornarPagamento" --> Q[[SQS billing-commands]] --> BI
+  subgraph BI[Billing Service]
+    H[Handler de comandos] --> D[(PostgreSQL<br/>oficina_billing)]
+    API[API REST + webhook MP] --> D
+    D --- OB[outbox → relay]
+  end
+  BI -- "OrcamentoGerado/Aprovado/Recusado/Cancelado<br/>PagamentoSolicitado/Confirmado/Recusado/Estornado<br/>EstornoFalhou" --> SNS{{SNS oficina-eventos}} --> OS
+  BI -- "REST (X-Idempotency-Key)" --> MP
+```
+
+Sequência completa da Saga (feliz e com compensação): [`sequence-saga-feliz.md`](https://github.com/PedrosPinho/soat15-tech-challenge-01/blob/main/docs/architecture/sequence-saga-feliz.md) ·
+[`sequence-saga-compensacao.md`](https://github.com/PedrosPinho/soat15-tech-challenge-01/blob/main/docs/architecture/sequence-saga-compensacao.md). Modelo de dados deste serviço:
+[`data-model.md`](https://github.com/PedrosPinho/soat15-tech-challenge-01/blob/main/docs/architecture/data-model.md) (seção Billing).
+
+
 ## Arquitetura do serviço
 
 ```
@@ -83,6 +104,8 @@ npm run dev                                # http://localhost:3001
 
 `docker compose up --build` sobe tudo (API na porta 3003) com `PAYMENT_GATEWAY=fake`. Para o sandbox real do Mercado Pago use `PAYMENT_GATEWAY=mercadopago`, `MP_ACCESS_TOKEN` (`TEST-…`), `MP_WEBHOOK_SECRET` e uma `MP_NOTIFICATION_URL` pública (ver `.env.example`). Modos: `MESSAGING_DRIVER=memory` roda sem AWS; `MESSAGING_ENABLED=false` roda só a API.
 
+Ambiente completo com os 3 serviços: `docker-compose.integration.yml` e `scripts/smoke-fluxo-feliz.sh` no repositório do OS Service.
+
 Testes: `npm test` · cobertura: `npm run test:coverage` (threshold 80%) · lint: `npm run lint` · tipos: `npm run type-check`.
 
 ## Qualidade, CI/CD e cobertura
@@ -93,6 +116,19 @@ Testes: `npm test` · cobertura: `npm run test:coverage` (threshold 80%) · lint
 - Infra do serviço em [`terraform/`](terraform) e manifests em [`k8s/`](k8s). Requer o `apply` prévio do OS Service (dono do tópico `oficina-eventos`) e o bootstrap do banco `oficina_billing` (Etapa 5).
 - Evidência de cobertura: _a preencher_ (badge SonarCloud + relatório do CI).
 - `main` e `homolog` protegidas: PR obrigatório e status checks `Build`, `Test` e `Sonar` (`scripts/protect-branches.sh` no repo do OS Service aplica). `destroy.yml` (manual) remove workloads e infra do serviço.
+
+## Cobertura e documentação da API
+
+- **Cobertura**: 98,2 % de linhas · 93,5 % de branches · 96,6 % de funções (`npm run test:coverage`, sem os testes de integração
+  que exigem Postgres/LocalStack; mínimo exigido 80 %). O CI publica o relatório e o SonarCloud aplica o quality gate
+  (badge no repositório do OS Service).
+- **Contratos**: `tests/contracts/` — este serviço consome os comandos reais do OS (`os-commands.json`) e produz os eventos
+  que o OS consome (`billing-events.json`); ver o README do OS Service, seção Testes.
+- **Swagger**: `/api/orcamentos/docs`. **Postman do fluxo completo** (3 serviços, variáveis encadeadas):
+  [`oficina-fase4-fluxo-completo.postman_collection.json`](https://github.com/PedrosPinho/soat15-tech-challenge-01/blob/main/docs/postman/oficina-fase4-fluxo-completo.postman_collection.json).
+- **Mercado Pago em dev**: `PAYMENT_GATEWAY=fake` (padrão do compose) + `POST /internal/dev/mercadopago/pagamentos` e
+  `/internal/pagamentos/:id/sincronizar` simulam o comprador; com `mercadopago`, o sandbox real (ver `.env.example`).
+
 
 ## Documentação da arquitetura
 
