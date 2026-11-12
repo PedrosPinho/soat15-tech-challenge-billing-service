@@ -119,7 +119,7 @@ Testes: `npm test` · cobertura: `npm run test:coverage` (threshold 80%) · lint
 
 ## Cobertura e documentação da API
 
-- **Cobertura**: 98,2 % de linhas · 93,5 % de branches · 96,6 % de funções (`npm run test:coverage`, sem os testes de integração
+- **Cobertura**: 99,6 % de linhas · 92,9 % de branches · 97,5 % de funções (`npm run test:coverage`, sem os testes de integração
   que exigem Postgres/LocalStack; mínimo exigido 80 %). O CI publica o relatório e o SonarCloud aplica o quality gate
   (badge no repositório do OS Service).
 - **Contratos**: `tests/contracts/` — este serviço consome os comandos reais do OS (`os-commands.json`) e produz os eventos
