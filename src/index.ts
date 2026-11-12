@@ -39,6 +39,7 @@ const startServer = async (): Promise<void> => {
     if (process.env.MESSAGING_ENABLED !== 'false') {
       const rt = runtime;
       rt.relay.start();
+      rt.queueDepth?.start();
       subscription = await rt.bus.subscribe(Destinations.BillingCommands, (envelope) =>
         rt.commandHandler.handle(envelope),
       );
@@ -55,6 +56,7 @@ const shutdown = async (signal: string): Promise<void> => {
   httpServer?.close();
   await subscription?.stop();
   await runtime?.relay.stop();
+  await runtime?.queueDepth?.stop();
   await disconnectDatabase();
   process.exit(0);
 };

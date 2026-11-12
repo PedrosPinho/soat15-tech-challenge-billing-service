@@ -4,7 +4,7 @@ import { IPagamentoRepository, ResumoFinanceiro } from '@domain/repositories/pag
 import { IPaymentGateway, PagamentoGateway } from '@domain/services/payment-gateway';
 import { IUnitOfWork } from '@domain/services/unit-of-work';
 import { NotFoundError } from '@shared/errors/domain.error';
-import { logger } from '@shared/logger';
+import { logger, vincularSaga } from '@shared/logger';
 import { correlationIdAtual, publicarEvento } from '../eventos';
 
 export interface PagamentoUseCasesDeps {
@@ -74,6 +74,7 @@ export class PagamentoUseCases {
         );
         return 'ignorado';
       }
+      vincularSaga(pagamento.sagaId, pagamento.ordemServicoId);
       const agora = this.clock();
       const correlationId = correlationIdAtual();
 

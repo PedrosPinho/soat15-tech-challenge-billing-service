@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { capturarTrace, TraceHeaders } from '../observability/tracing';
 
 /**
  * Envelope de todo comando/evento trafegado entre os microsserviços.
@@ -12,6 +13,11 @@ export interface Envelope<TPayload = unknown, TType extends string = string> {
   correlationId: string;
   occurredAt: string;
   payload: TPayload;
+  /**
+   * Headers de distributed tracing do produtor (opcional, compatível: consumidor que não conhece
+   * o campo o ignora). Só existe quando havia uma transação do APM no momento da criação.
+   */
+  trace?: TraceHeaders;
 }
 
 export interface CreateEnvelopeInput<TPayload, TType extends string> {
@@ -26,15 +32,19 @@ export interface CreateEnvelopeInput<TPayload, TType extends string> {
 
 export const createEnvelope = <TPayload, TType extends string>(
   input: CreateEnvelopeInput<TPayload, TType>,
-): Envelope<TPayload, TType> => ({
-  messageId: input.messageId ?? randomUUID(),
-  type: input.type,
-  version: input.version ?? 1,
-  sagaId: input.sagaId,
-  correlationId: input.correlationId,
-  occurredAt: (input.occurredAt ?? new Date()).toISOString(),
-  payload: input.payload,
-});
+): Envelope<TPayload, TType> => {
+  const trace = capturarTrace();
+  return {
+    messageId: input.messageId ?? randomUUID(),
+    type: input.type,
+    version: input.version ?? 1,
+    sagaId: input.sagaId,
+    correlationId: input.correlationId,
+    occurredAt: (input.occurredAt ?? new Date()).toISOString(),
+    payload: input.payload,
+    ...(trace ? { trace } : {}),
+  };
+};
 
 export class InvalidEnvelopeError extends Error {
   constructor(message: string) {

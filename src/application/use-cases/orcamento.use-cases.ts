@@ -5,6 +5,7 @@ import { IOutboxRepository } from '@domain/repositories/outbox.repository';
 import { IPagamentoRepository } from '@domain/repositories/pagamento.repository';
 import { IUnitOfWork } from '@domain/services/unit-of-work';
 import { ForbiddenError, InvalidTransitionError, NotFoundError } from '@shared/errors/domain.error';
+import { vincularSaga } from '@shared/logger';
 import { correlationIdAtual, publicarEvento } from '../eventos';
 
 /** Quem está chamando: funcionário da oficina ou o cliente dono do orçamento. */
@@ -67,6 +68,7 @@ export class OrcamentoUseCases {
 
     const { orcamento, expirou } = await this.d.uow.run(async () => {
       const o = this.permitir(await this.d.orcamentos.findById(id, true), actor);
+      vincularSaga(o.sagaId, o.ordemServicoId);
       const agora = this.clock();
       const correlationId = correlationIdAtual();
 

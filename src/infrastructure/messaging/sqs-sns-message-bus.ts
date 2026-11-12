@@ -9,7 +9,8 @@ import {
 import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 import { IMessageBus, MessageHandler, Subscription } from '@domain/services/message-bus';
 import { Envelope, parseEnvelopeFromJson } from '@shared/messaging/envelope';
-import { logger } from '@shared/logger';
+import { logger, requestContext, vincularSaga } from '@shared/logger';
+import { emTransacaoDeConsumo } from '@shared/observability/tracing';
 
 export interface SqsSnsMessageBusConfig {
   sqs: SQSClient;
@@ -30,6 +31,13 @@ const attributesOf = (
   type: { DataType: 'String', StringValue: message.type },
   sagaId: { DataType: 'String', StringValue: message.sagaId },
   correlationId: { DataType: 'String', StringValue: message.correlationId },
+  // headers de distributed tracing (W3C + New Relic) duplicados nos atributos, como no contrato
+  ...Object.fromEntries(
+    Object.entries(message.trace ?? {}).map(([k, v]) => [
+      k,
+      { DataType: 'String', StringValue: v },
+    ]),
+  ),
 });
 
 /**
@@ -124,7 +132,7 @@ export class SqsSnsMessageBus implements IMessageBus {
     }
 
     try {
-      await handler(envelope);
+      await this.consumir(queue, envelope, handler);
     } catch (error) {
       const receiveCount = Number(raw.Attributes?.ApproximateReceiveCount ?? '1');
       const backoff = Math.min(2 ** receiveCount * 5, 300);
@@ -138,6 +146,17 @@ export class SqsSnsMessageBus implements IMessageBus {
 
     await this.config.sqs.send(
       new DeleteMessageCommand({ QueueUrl: queueUrl, ReceiptHandle: raw.ReceiptHandle }),
+    );
+  }
+
+  /** Transação de APM ligada ao trace do produtor + contexto de log com saga/OS. */
+  private consumir(queue: string, envelope: Envelope, handler: MessageHandler): Promise<void> {
+    const ordemServicoId = (envelope.payload as { ordemServicoId?: string }).ordemServicoId;
+    return emTransacaoDeConsumo(`${queue}/${envelope.type}`, envelope.trace, () =>
+      requestContext.run({ correlationId: envelope.correlationId }, () => {
+        vincularSaga(envelope.sagaId, ordemServicoId);
+        return handler(envelope);
+      }),
     );
   }
 

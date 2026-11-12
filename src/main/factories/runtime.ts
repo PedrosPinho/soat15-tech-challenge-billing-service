@@ -11,6 +11,7 @@ import { PostgresOrcamentoRepository } from '@infrastructure/database/postgres/r
 import { PostgresOutboxRepository } from '@infrastructure/database/postgres/repositories/outbox.repository.impl';
 import { PostgresPagamentoRepository } from '@infrastructure/database/postgres/repositories/pagamento.repository.impl';
 import { PostgresUnitOfWork } from '@infrastructure/database/postgres/unit-of-work';
+import { filaComDlq, QueueDepthCollector } from '@infrastructure/messaging/queue-depth-collector';
 import { InMemoryMessageBus } from '@infrastructure/messaging/in-memory-message-bus';
 import { SqsSnsMessageBus } from '@infrastructure/messaging/sqs-sns-message-bus';
 import { FakePaymentGateway } from '@infrastructure/payments/fake-payment-gateway';
@@ -52,6 +53,8 @@ export interface Runtime {
   commandHandler: BillingCommandHandler;
   relay: OutboxRelay;
   bus: IMessageBus;
+  /** Mede filas/DLQs (só com SQS real). */
+  queueDepth?: QueueDepthCollector;
   /** Presente só com o gateway fake (habilita a rota de simulação). */
   fakePaymentGateway?: FakePaymentGateway;
 }
@@ -67,7 +70,18 @@ export const makeRuntime = (
   const outbox = new PostgresOutboxRepository();
   const inbox = new PostgresInboxRepository();
 
+  const queueDepth =
+    bus instanceof SqsSnsMessageBus
+      ? new QueueDepthCollector(
+          new SQSClient({ region: process.env.AWS_REGION ?? 'us-east-1' }),
+          'billing-service',
+          filaComDlq(Destinations.BillingCommands, required('BILLING_COMMANDS_QUEUE_URL')),
+          Number(process.env.QUEUE_DEPTH_INTERVAL_MS ?? 60_000),
+        )
+      : undefined;
+
   return {
+    queueDepth,
     bus,
     fakePaymentGateway: gateway instanceof FakePaymentGateway ? gateway : undefined,
     controller: new BillingController(
