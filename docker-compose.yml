@@ -28,10 +28,12 @@ services:
     environment:
       SERVICES: sqs,sns
       AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro
     networks:
       - oficina-network
     healthcheck:
-      test: awslocal sqs list-queues
+      test: awslocal sqs get-queue-url --queue-name billing-commands
       interval: 10s
       timeout: 5s
       retries: 10
@@ -50,6 +52,15 @@ services:
       PORT: 3001
       DATABASE_URL: postgres://oficina:senha123@postgres:5432/oficina_billing
       JWT_SECRET: change-this-in-production
+      INTERNAL_API_TOKEN: change-this-internal-token
+      WEBHOOK_SECRET: change-this-webhook-secret
+      MESSAGING_DRIVER: sqs
+      BILLING_COMMANDS_QUEUE_URL: http://localstack:4566/000000000000/billing-commands
+      EVENTS_TOPIC_ARN: arn:aws:sns:us-east-1:000000000000:oficina-eventos
+      # Sem conta no Mercado Pago: gateway em memória (PAYMENT_GATEWAY=mercadopago + MP_* para o sandbox real).
+      PAYMENT_GATEWAY: fake
+      MP_WEBHOOK_SECRET: change-this-mp-webhook-secret
+      NOTIFICATION_PROVIDER: smtp
       AWS_REGION: us-east-1
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_ACCESS_KEY_ID: test

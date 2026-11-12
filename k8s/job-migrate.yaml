@@ -1,0 +1,22 @@
+# Job de migration, aplicado pelo CI/CD antes do rollout (nunca manualmente). O pipeline
+# apaga a execução anterior e recria a cada deploy (a spec de um Job é imutável).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: billing-service-migrate
+  namespace: oficina
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: billing-service:local
+          command: ["npm", "run", "db:migrate"]
+          envFrom:
+            - configMapRef:
+                name: billing-service-config
+            - secretRef:
+                name: billing-service-secret

@@ -1,0 +1,16 @@
+# ClusterIP: o tráfego externo entra pelo Ingress (ALB interno compartilhado, ADR-013),
+# que aponta direto para os pods (target-type=ip).
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-service
+  namespace: oficina
+spec:
+  type: ClusterIP
+  selector:
+    app: billing-service
+  ports:
+    - name: http
+      port: 3003
+      targetPort: http
+      protocol: TCP

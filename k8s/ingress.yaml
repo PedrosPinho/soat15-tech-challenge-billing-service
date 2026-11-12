@@ -1,0 +1,24 @@
+# Ingress do Billing Service no ALB interno compartilhado (ADR-013): todos os serviços
+# declaram o MESMO `group.name` e o AWS Load Balancer Controller funde tudo em UM ALB, alvo
+# único do VPC Link do API Gateway. `oficina-ENV` é substituído pelo CI (homolog/prod).
+# Em kind (uso local) não há ALB Controller — use `kubectl port-forward`.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: billing-service
+  namespace: oficina
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: oficina-ENV
+    alb.ingress.kubernetes.io/group.order: "20"
+    alb.ingress.kubernetes.io/healthcheck-path: /health/live
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - { path: /api/orcamentos, pathType: Prefix, backend: { service: { name: billing-service, port: { name: http } } } }
+          - { path: /api/pagamentos, pathType: Prefix, backend: { service: { name: billing-service, port: { name: http } } } }
+          # /internal NÃO é publicado: o OS chama http://billing-service:3003 dentro do cluster.
