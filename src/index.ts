@@ -29,6 +29,7 @@ const startServer = async (): Promise<void> => {
     runtime = makeRuntime();
     const app = createApp({
       billingController: runtime.controller,
+      fakePaymentGateway: runtime.fakePaymentGateway,
       readiness: { name: 'database', check: async () => !!(await getPool().query('SELECT 1')) },
     });
     httpServer = app.listen(PORT, () => {

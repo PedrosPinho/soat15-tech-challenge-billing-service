@@ -23,9 +23,14 @@ describe('contrato: Billing ↔ OS', () => {
 
   const cmd = (type: string, patch: Record<string, unknown> = {}): Envelope => {
     const c = comandos.find((x) => x.type === type)!;
-    return { ...c, messageId: crypto.randomUUID(), payload: { ...(c.payload as object), ...patch } };
+    return {
+      ...c,
+      messageId: crypto.randomUUID(),
+      payload: { ...(c.payload as object), ...patch },
+    };
   };
-  const orcamentoDe = async (osId: string): Promise<string> => (await f.orcamentos.findByOrdemServicoId(osId))!.id;
+  const orcamentoDe = async (osId: string): Promise<string> =>
+    (await f.orcamentos.findByOrdemServicoId(osId))!.id;
 
   it('o handler aceita os comandos reais do OS e os eventos batem com o contrato', async () => {
     // OS 1: orçamento -> aprovado -> pagamento -> confirmado -> estornado; depois cancelado
@@ -66,15 +71,30 @@ describe('contrato: Billing ↔ OS', () => {
     const emitidos = f.db.outbox;
     const porTipo = primeiroDeCada(emitidos);
     expect(porTipo.map((e) => e.type).sort()).toEqual([
-      'EstornoFalhou', 'OrcamentoAprovado', 'OrcamentoCancelado', 'OrcamentoFalhou', 'OrcamentoGerado',
-      'OrcamentoRecusado', 'PagamentoConfirmado', 'PagamentoEstornado', 'PagamentoRecusado', 'PagamentoSolicitado',
+      'EstornoFalhou',
+      'OrcamentoAprovado',
+      'OrcamentoCancelado',
+      'OrcamentoFalhou',
+      'OrcamentoGerado',
+      'OrcamentoRecusado',
+      'PagamentoConfirmado',
+      'PagamentoEstornado',
+      'PagamentoRecusado',
+      'PagamentoSolicitado',
     ]);
     conferirContrato('billing-events.json', normalizar(porTipo));
   });
 
   it('cada comando do OS para o Billing é reconhecido', async () => {
-    for (const type of ['GerarOrcamento', 'CancelarOrcamento', 'SolicitarPagamento', 'EstornarPagamento']) {
-      await expect(handler.handle(cmd(type, { ordemServicoId: `x-${type}` }))).resolves.toBeUndefined();
+    for (const type of [
+      'GerarOrcamento',
+      'CancelarOrcamento',
+      'SolicitarPagamento',
+      'EstornarPagamento',
+    ]) {
+      await expect(
+        handler.handle(cmd(type, { ordemServicoId: `x-${type}` })),
+      ).resolves.toBeUndefined();
     }
   });
 });

@@ -52,6 +52,8 @@ export interface Runtime {
   commandHandler: BillingCommandHandler;
   relay: OutboxRelay;
   bus: IMessageBus;
+  /** Presente só com o gateway fake (habilita a rota de simulação). */
+  fakePaymentGateway?: FakePaymentGateway;
 }
 
 /** Composition root. Exige o pool já conectado (`connectDatabase`). */
@@ -67,6 +69,7 @@ export const makeRuntime = (
 
   return {
     bus,
+    fakePaymentGateway: gateway instanceof FakePaymentGateway ? gateway : undefined,
     controller: new BillingController(
       new OrcamentoUseCases({ uow, orcamentos, pagamentos, outbox }),
       new PagamentoUseCases({ uow, pagamentos, outbox, gateway }),

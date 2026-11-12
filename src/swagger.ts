@@ -240,6 +240,37 @@ export const swaggerSpec = {
         },
       },
     },
+    '/internal/dev/mercadopago/pagamentos': {
+      post: {
+        tags: ['Internal'],
+        summary: '[dev] Simula um pagamento no gateway fake',
+        description:
+          'Só existe com `PAYMENT_GATEWAY=fake` (smoke local). Depois use `/internal/pagamentos/{id}/sincronizar`.',
+        security: [{ internalToken: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['mpPaymentId', 'status', 'orcamentoId', 'valor'],
+                properties: {
+                  mpPaymentId: { type: 'string' },
+                  status: { type: 'string', example: 'approved' },
+                  orcamentoId: { type: 'string' },
+                  valor: { type: 'number' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Pagamento simulado' },
+          '400': { description: 'Corpo inválido' },
+          '401': { description: 'Token interno inválido' },
+        },
+      },
+    },
     '/internal/pagamentos/{id}/sincronizar': {
       post: {
         tags: ['Internal'],

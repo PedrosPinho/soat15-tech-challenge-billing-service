@@ -372,6 +372,53 @@ describe('rotas do Billing', () => {
     });
   });
 
+  describe('/internal/dev (gateway fake)', () => {
+    const tok = { 'x-internal-token': 'tok-interno' };
+    const appFake = (): ReturnType<typeof createApp> =>
+      createApp({
+        billingController: new BillingController(
+          new OrcamentoUseCases({ ...f }),
+          new PagamentoUseCases({ ...f, gateway }),
+        ),
+        fakePaymentGateway: gateway,
+      });
+
+    it('não existe sem o gateway fake', async () => {
+      expect(
+        (await request(app).post('/internal/dev/mercadopago/pagamentos').set(tok).send({})).status,
+      ).toBe(404);
+    });
+
+    it('simula o comprador e a reconciliação confirma o pagamento', async () => {
+      const sim = await request(appFake())
+        .post('/internal/dev/mercadopago/pagamentos')
+        .set(tok)
+        .send({ mpPaymentId: 'mp-dev', status: 'approved', orcamentoId: orcId, valor: 200 });
+      expect(sim.status).toBe(201);
+      const sync = await request(appFake())
+        .post(`/internal/pagamentos/${pg.id}/sincronizar`)
+        .set(tok);
+      expect(sync.body.resultado).toBe('confirmado');
+    });
+
+    it('exige token interno e corpo válido', async () => {
+      expect(
+        (await request(appFake()).post('/internal/dev/mercadopago/pagamentos').send({})).status,
+      ).toBe(401);
+      expect(
+        (
+          await request(appFake())
+            .post('/internal/dev/mercadopago/pagamentos')
+            .set(tok)
+            .send({ mpPaymentId: 1 })
+        ).status,
+      ).toBe(400);
+      expect(
+        (await request(appFake()).post('/internal/dev/mercadopago/pagamentos').set(tok)).status,
+      ).toBe(400);
+    });
+  });
+
   it('sem controller as rotas de negócio não existem', async () => {
     expect((await request(createApp()).get('/api/orcamentos/x')).status).toBe(404);
   });

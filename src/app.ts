@@ -12,6 +12,7 @@ import {
   createPagamentoRouter,
 } from '@presentation/routes/billing.routes';
 import { BillingController } from '@presentation/controllers/billing.controller';
+import { FakePaymentGateway } from '@infrastructure/payments/fake-payment-gateway';
 import { swaggerSpec, swaggerUiOptions, DOCS_PATH } from './swagger';
 
 export interface AppDependencies {
@@ -19,6 +20,8 @@ export interface AppDependencies {
   readiness?: ReadinessProbe;
   /** Controller das rotas de negócio; ausente em testes que só exercitam a infraestrutura HTTP. */
   billingController?: BillingController;
+  /** Só com PAYMENT_GATEWAY=fake: habilita `/internal/dev/mercadopago/pagamentos` (smoke local). */
+  fakePaymentGateway?: FakePaymentGateway;
 }
 
 /**
@@ -50,7 +53,7 @@ export const createApp = (deps: AppDependencies = {}): Application => {
   if (deps.billingController) {
     app.use('/api/orcamentos', createOrcamentoRouter(deps.billingController));
     app.use('/api/pagamentos', createPagamentoRouter(deps.billingController));
-    app.use('/internal', createInternalRouter(deps.billingController));
+    app.use('/internal', createInternalRouter(deps.billingController, deps.fakePaymentGateway));
   }
 
   app.use(errorHandler);
