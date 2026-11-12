@@ -87,12 +87,12 @@ Testes: `npm test` · cobertura: `npm run test:coverage` (threshold 80%) · lint
 
 ## Qualidade, CI/CD e cobertura
 
-- CI em GitHub Actions (`.github/workflows/ci-cd.yml`): `Build` (tipos, lint, build) e `Test` (cobertura com threshold de 80%).
+- CI em GitHub Actions (`.github/workflows/ci-cd.yml`): `Build` (tipos, lint, build), `Test` (cobertura com threshold de 80%) e `Sonar` (SonarCloud; o passo espera o quality gate). Em PR roda também `Terraform plan`; em push (`homolog`) `terraform apply` → build/push no ECR → deploy.
 - Jobs de infraestrutura: `terraform-validate` (fmt + validate), `terraform-apply` (ECR e fila `billing-commands` + DLQ; `apply` só em `homolog`, `plan` em `main` — ADR-007), `docker-build-push` (ECR) e `deploy` (EKS, com Job de migration). SonarCloud entra na Etapa 8.
 - `tests/integration.postgres.spec.ts` roda contra PostgreSQL real (service container no CI; localmente defina `TEST_DATABASE_URL`).
 - Infra do serviço em [`terraform/`](terraform) e manifests em [`k8s/`](k8s). Requer o `apply` prévio do OS Service (dono do tópico `oficina-eventos`) e o bootstrap do banco `oficina_billing` (Etapa 5).
 - Evidência de cobertura: _a preencher_ (badge SonarCloud + relatório do CI).
-- `main` e `homolog` protegidas: PR obrigatório e status checks `Build` e `Test`.
+- `main` e `homolog` protegidas: PR obrigatório e status checks `Build`, `Test` e `Sonar` (`scripts/protect-branches.sh` no repo do OS Service aplica). `destroy.yml` (manual) remove workloads e infra do serviço.
 
 ## Documentação da arquitetura
 

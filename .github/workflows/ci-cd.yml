@@ -10,7 +10,8 @@ name: CI/CD
 # Ordem de deploy: o OS Service precisa ter feito apply antes (dono do tópico oficina-eventos,
 # lido via terraform_remote_state).
 #
-# Os nomes dos jobs `Build` e `Test` são os status checks obrigatórios da branch protection.
+# Os nomes dos jobs `Build`, `Test` e `Sonar` são os status checks obrigatórios da branch protection
+# (scripts/protect-branches.sh no repo do OS Service). `Sonar` espera o quality gate do SonarCloud.
 
 on:
   push:
@@ -122,9 +123,76 @@ jobs:
       - run: terraform init -backend=false
       - run: terraform validate
 
+  sonar:
+    name: Sonar
+    needs: [test]
+    # PR de fork não recebe secrets; nesse caso o check não roda (o mantenedor reexecuta no merge).
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # análise de código novo (blame) precisa do histórico
+      - name: Falha clara se o token não foi configurado
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          [ -n "$SONAR_TOKEN" ] || { echo "::error::GitHub Secret SONAR_TOKEN ausente (ver PHASE_4_EXECUTION_GUIDE.md, Passo 3)"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          # Quality gate obrigatório: o passo espera o resultado e falha se o gate reprovar.
+          args: -Dsonar.qualitygate.wait=true
+
+  terraform-plan:
+    name: Terraform plan
+    needs: [terraform-validate]
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Contra `main` o workspace prod não existe de verdade (ADR-007): a falha é esperada.
+    continue-on-error: ${{ github.base_ref == 'main' }}
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: terraform init
+      - name: Plan (workspace do ambiente de destino)
+        run: |
+          ENV=homolog
+          [ "${{ github.base_ref }}" = "main" ] && ENV=prod
+          terraform workspace select -or-create "$ENV"
+          set -o pipefail
+          terraform plan -no-color -input=false -lock=false | tee plan-output.txt
+          {
+            echo "## Terraform plan — Billing Service ($ENV)"
+            echo '<details><summary>Ver plano</summary>'
+            echo
+            echo '```'
+            tail -c 60000 plan-output.txt
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   terraform-apply:
     name: Terraform (ECR + fila de comandos)
-    needs: [build, test, terraform-validate]
+    needs: [build, test, sonar, terraform-validate]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'prod' || 'homolog' }}
@@ -169,7 +237,7 @@ jobs:
 
   docker-build-push:
     name: Build & Push (ECR)
-    needs: [build, test, terraform-apply]
+    needs: [build, test, sonar, terraform-apply]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
