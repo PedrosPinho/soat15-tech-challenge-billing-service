@@ -6,11 +6,19 @@ import swaggerUi from 'swagger-ui-express';
 import { correlationIdMiddleware } from '@presentation/middlewares/correlation-id.middleware';
 import { errorHandler } from '@presentation/middlewares/error.middleware';
 import { createHealthRouter, ReadinessProbe } from '@presentation/routes/health.routes';
+import {
+  createInternalRouter,
+  createOrcamentoRouter,
+  createPagamentoRouter,
+} from '@presentation/routes/billing.routes';
+import { BillingController } from '@presentation/controllers/billing.controller';
 import { swaggerSpec, swaggerUiOptions, DOCS_PATH } from './swagger';
 
 export interface AppDependencies {
   /** Dependência cuja conectividade define a readiness do pod (banco, DynamoDB...). */
   readiness?: ReadinessProbe;
+  /** Controller das rotas de negócio; ausente em testes que só exercitam a infraestrutura HTTP. */
+  billingController?: BillingController;
 }
 
 /**
@@ -39,6 +47,11 @@ export const createApp = (deps: AppDependencies = {}): Application => {
   app.get(`${DOCS_PATH}.json`, (_req, res) => res.json(swaggerSpec));
 
   app.use('/health', createHealthRouter(deps.readiness));
+  if (deps.billingController) {
+    app.use('/api/orcamentos', createOrcamentoRouter(deps.billingController));
+    app.use('/api/pagamentos', createPagamentoRouter(deps.billingController));
+    app.use('/internal', createInternalRouter(deps.billingController));
+  }
 
   app.use(errorHandler);
   return app;
