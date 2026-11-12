@@ -95,7 +95,13 @@ export class MercadoPagoPaymentGateway implements IPaymentGateway {
   }
 
   async consultarPagamento(mpPaymentId: string): Promise<PagamentoGateway | null> {
-    const res = await this.request('GET', `/v1/payments/${encodeURIComponent(mpPaymentId)}`, undefined, undefined, [404]);
+    const res = await this.request(
+      'GET',
+      `/v1/payments/${encodeURIComponent(mpPaymentId)}`,
+      undefined,
+      undefined,
+      [404],
+    );
     if (res.status === 404) return null;
     return toGateway((await res.json()) as MpPayment);
   }
@@ -147,7 +153,9 @@ export class MercadoPagoPaymentGateway implements IPaymentGateway {
     }
     if (!res.ok && !toleratedStatuses.includes(res.status)) {
       const detalhe = (await res.text().catch(() => '')).slice(0, 300);
-      throw new PaymentGatewayError(`Mercado Pago respondeu ${res.status} (${method} ${path}): ${detalhe}`);
+      throw new PaymentGatewayError(
+        `Mercado Pago respondeu ${res.status} (${method} ${path}): ${detalhe}`,
+      );
     }
     return res;
   }

@@ -108,15 +108,13 @@ const toProps = (r: OrcamentoRow, itens: ItemRow[]): OrcamentoProps => ({
     email: r.cliente_email ?? undefined,
     cpfCnpj: r.cliente_cpf_cnpj,
   },
-  itens: itens.map(
-    (i): ItemOrcamentoPayload => ({
-      tipo: i.tipo,
-      referenciaId: i.referencia_id,
-      descricao: i.descricao,
-      quantidade: i.quantidade,
-      valorUnitario: Number(i.valor_unitario),
-    }),
-  ),
+  itens: itens.map((i): ItemOrcamentoPayload => ({
+    tipo: i.tipo,
+    referenciaId: i.referencia_id,
+    descricao: i.descricao,
+    quantidade: i.quantidade,
+    valorUnitario: Number(i.valor_unitario),
+  })),
   valorTotal: Number(r.valor_total),
   validadeAte: r.validade_ate,
   status: r.status,

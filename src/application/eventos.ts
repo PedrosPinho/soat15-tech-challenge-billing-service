@@ -31,4 +31,5 @@ export const publicarEvento = <T extends EventoPublicavel>(
   });
 
 /** `correlationId` da requisição HTTP corrente, ou um novo (webhooks sem cabeçalho). */
-export const correlationIdAtual = (): string => requestContext.getStore()?.correlationId ?? randomUUID();
+export const correlationIdAtual = (): string =>
+  requestContext.getStore()?.correlationId ?? randomUUID();

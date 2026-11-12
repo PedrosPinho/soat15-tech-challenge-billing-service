@@ -59,28 +59,62 @@ export class Pagamento {
     return new Pagamento({ ...props });
   }
 
-  get id(): string { return this.props.id; }
-  get orcamentoId(): string { return this.props.orcamentoId; }
-  get ordemServicoId(): string { return this.props.ordemServicoId; }
-  get sagaId(): string { return this.props.sagaId; }
-  get valor(): number { return this.props.valor; }
-  get status(): PagamentoStatus { return this.props.status; }
-  get mpPreferenceId(): string { return this.props.mpPreferenceId; }
-  get initPoint(): string { return this.props.initPoint; }
-  get expiraEm(): Date { return this.props.expiraEm; }
-  get mpPaymentId(): string | undefined { return this.props.mpPaymentId; }
-  get mpRefundId(): string | undefined { return this.props.mpRefundId; }
-  get motivo(): string | undefined { return this.props.motivo; }
-  get confirmadoEm(): Date | undefined { return this.props.confirmadoEm; }
-  get criadoEm(): Date { return this.props.criadoEm; }
-  get atualizadoEm(): Date { return this.props.atualizadoEm; }
+  get id(): string {
+    return this.props.id;
+  }
+  get orcamentoId(): string {
+    return this.props.orcamentoId;
+  }
+  get ordemServicoId(): string {
+    return this.props.ordemServicoId;
+  }
+  get sagaId(): string {
+    return this.props.sagaId;
+  }
+  get valor(): number {
+    return this.props.valor;
+  }
+  get status(): PagamentoStatus {
+    return this.props.status;
+  }
+  get mpPreferenceId(): string {
+    return this.props.mpPreferenceId;
+  }
+  get initPoint(): string {
+    return this.props.initPoint;
+  }
+  get expiraEm(): Date {
+    return this.props.expiraEm;
+  }
+  get mpPaymentId(): string | undefined {
+    return this.props.mpPaymentId;
+  }
+  get mpRefundId(): string | undefined {
+    return this.props.mpRefundId;
+  }
+  get motivo(): string | undefined {
+    return this.props.motivo;
+  }
+  get confirmadoEm(): Date | undefined {
+    return this.props.confirmadoEm;
+  }
+  get criadoEm(): Date {
+    return this.props.criadoEm;
+  }
+  get atualizadoEm(): Date {
+    return this.props.atualizadoEm;
+  }
 
   toProps(): PagamentoProps {
     return { ...this.props };
   }
 
   confirmar(mpPaymentId: string, agora: Date = new Date()): void {
-    this.transitar([PagamentoStatus.PENDENTE, PagamentoStatus.RECUSADO], PagamentoStatus.CONFIRMADO, agora);
+    this.transitar(
+      [PagamentoStatus.PENDENTE, PagamentoStatus.RECUSADO],
+      PagamentoStatus.CONFIRMADO,
+      agora,
+    );
     this.props.mpPaymentId = mpPaymentId;
     this.props.confirmadoEm = agora;
     this.props.motivo = undefined;

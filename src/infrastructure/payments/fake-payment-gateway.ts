@@ -26,7 +26,10 @@ export class FakePaymentGateway implements IPaymentGateway {
     const existente = this.preferencias.get(input.idempotencyKey);
     if (existente) return { preferenceId: existente.preferenceId, initPoint: existente.initPoint };
     const preferenceId = `pref-${randomUUID().slice(0, 8)}`;
-    const pref = { preferenceId, initPoint: `https://fake.mercadopago.test/checkout/${preferenceId}` };
+    const pref = {
+      preferenceId,
+      initPoint: `https://fake.mercadopago.test/checkout/${preferenceId}`,
+    };
     this.preferencias.set(input.idempotencyKey, { ...pref, input });
     return pref;
   }
@@ -48,7 +51,8 @@ export class FakePaymentGateway implements IPaymentGateway {
     const existente = this.estornos.get(idempotencyKey);
     if (existente) return existente;
     const pagamento = this.pagamentos.get(mpPaymentId);
-    if (!pagamento) throw new PaymentGatewayError(`Pagamento ${mpPaymentId} inexistente no gateway`);
+    if (!pagamento)
+      throw new PaymentGatewayError(`Pagamento ${mpPaymentId} inexistente no gateway`);
     const estorno = { refundId: `refund-${randomUUID().slice(0, 8)}` };
     this.estornos.set(idempotencyKey, estorno);
     pagamento.status = 'refunded';

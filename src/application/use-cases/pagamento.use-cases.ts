@@ -1,9 +1,6 @@
 import { Pagamento, PagamentoStatus } from '@domain/entities/pagamento.entity';
 import { IOutboxRepository } from '@domain/repositories/outbox.repository';
-import {
-  IPagamentoRepository,
-  ResumoFinanceiro,
-} from '@domain/repositories/pagamento.repository';
+import { IPagamentoRepository, ResumoFinanceiro } from '@domain/repositories/pagamento.repository';
 import { IPaymentGateway, PagamentoGateway } from '@domain/services/payment-gateway';
 import { IUnitOfWork } from '@domain/services/unit-of-work';
 import { NotFoundError } from '@shared/errors/domain.error';
@@ -19,11 +16,7 @@ export interface PagamentoUseCasesDeps {
 }
 
 export type ResultadoNotificacao =
-  | 'confirmado'
-  | 'recusado'
-  | 'ignorado'
-  | 'ja-processado'
-  | 'divergente';
+  'confirmado' | 'recusado' | 'ignorado' | 'ja-processado' | 'divergente';
 
 /**
  * Efeitos das notificações do Mercado Pago (webhook e reconciliação). O corpo do
@@ -48,7 +41,9 @@ export class PagamentoUseCases {
   }
 
   /** Reconciliação (webhook perdido): `POST /internal/pagamentos/:id/sincronizar`. */
-  async sincronizar(pagamentoId: string): Promise<{ pagamento: Pagamento; resultado: ResultadoNotificacao }> {
+  async sincronizar(
+    pagamentoId: string,
+  ): Promise<{ pagamento: Pagamento; resultado: ResultadoNotificacao }> {
     const pagamento = await this.d.pagamentos.findById(pagamentoId);
     if (!pagamento) throw new NotFoundError('Pagamento não encontrado');
 
@@ -73,7 +68,10 @@ export class PagamentoUseCases {
     return this.d.uow.run(async () => {
       const pagamento = await this.d.pagamentos.findUltimoByOrcamentoId(orcamentoId, true);
       if (!pagamento) {
-        logger.warn({ mpPaymentId: mp.id, orcamentoId }, 'Pagamento do MP sem pagamento local: ignorado');
+        logger.warn(
+          { mpPaymentId: mp.id, orcamentoId },
+          'Pagamento do MP sem pagamento local: ignorado',
+        );
         return 'ignorado';
       }
       const agora = this.clock();
@@ -102,14 +100,20 @@ export class PagamentoUseCases {
         // PENDENTE, ou RECUSADO por cancelamento (cliente pagou tarde): o dinheiro entrou.
         pagamento.confirmar(mp.id, agora);
         await this.d.pagamentos.update(pagamento);
-        await publicarEvento(this.d.outbox, 'PagamentoConfirmado', pagamento.sagaId, correlationId, {
-          ordemServicoId: pagamento.ordemServicoId,
-          orcamentoId: pagamento.orcamentoId,
-          pagamentoId: pagamento.id,
-          mpPaymentId: mp.id,
-          valor: pagamento.valor,
-          confirmadoEm: agora.toISOString(),
-        });
+        await publicarEvento(
+          this.d.outbox,
+          'PagamentoConfirmado',
+          pagamento.sagaId,
+          correlationId,
+          {
+            ordemServicoId: pagamento.ordemServicoId,
+            orcamentoId: pagamento.orcamentoId,
+            pagamentoId: pagamento.id,
+            mpPaymentId: mp.id,
+            valor: pagamento.valor,
+            confirmadoEm: agora.toISOString(),
+          },
+        );
         return 'confirmado';
       }
 

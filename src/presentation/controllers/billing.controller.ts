@@ -18,7 +18,9 @@ import { UnauthorizedError } from '@shared/errors/domain.error';
 import { logger } from '@shared/logger';
 
 const actorDe = (req: AuthenticatedRequest): Actor =>
-  req.scope === 'cliente' ? { scope: 'cliente', clienteId: req.clienteId ?? '' } : { scope: 'interno' };
+  req.scope === 'cliente'
+    ? { scope: 'cliente', clienteId: req.clienteId ?? '' }
+    : { scope: 'interno' };
 
 const orcamentoView = (o: Orcamento): Record<string, unknown> => ({
   id: o.id,
@@ -68,7 +70,8 @@ export class BillingController {
   constructor(
     private readonly orcamentos: OrcamentoUseCases,
     private readonly pagamentos: PagamentoUseCases,
-    private readonly mpWebhookSecret: () => string | undefined = () => process.env.MP_WEBHOOK_SECRET,
+    private readonly mpWebhookSecret: () => string | undefined = () =>
+      process.env.MP_WEBHOOK_SECRET,
   ) {}
 
   // ---- orçamentos ----
@@ -126,7 +129,11 @@ export class BillingController {
    * não reenviar. Falha ao processar → 500 (o MP tenta de novo; o processamento é idempotente).
    */
   webhookMercadoPago = wrap(async (req, res) => {
-    const body = (req.body ?? {}) as { type?: string; topic?: string; data?: { id?: string | number } };
+    const body = (req.body ?? {}) as {
+      type?: string;
+      topic?: string;
+      data?: { id?: string | number };
+    };
     // A assinatura cobre o `data.id` da QUERY; o corpo só é usado como fallback de roteamento.
     const queryDataId = req.query['data.id'] as string | undefined;
     const dataId = queryDataId ?? (body.data?.id !== undefined ? String(body.data.id) : undefined);

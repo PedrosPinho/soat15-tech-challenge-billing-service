@@ -62,7 +62,11 @@ export class PostgresPagamentoRepository implements IPagamentoRepository {
   }
 
   findUltimoByOrcamentoId(orcamentoId: string, lock = false): Promise<Pagamento | null> {
-    return this.findOne('WHERE orcamento_id = $1 ORDER BY criado_em DESC LIMIT 1', [orcamentoId], lock);
+    return this.findOne(
+      'WHERE orcamento_id = $1 ORDER BY criado_em DESC LIMIT 1',
+      [orcamentoId],
+      lock,
+    );
   }
 
   async listarPorOrdemServico(ordemServicoId: string): Promise<Pagamento[]> {
@@ -139,7 +143,11 @@ export class PostgresPagamentoRepository implements IPagamentoRepository {
     };
   }
 
-  private async findOne(clause: string, params: unknown[], lock: boolean): Promise<Pagamento | null> {
+  private async findOne(
+    clause: string,
+    params: unknown[],
+    lock: boolean,
+  ): Promise<Pagamento | null> {
     // FOR UPDATE vem depois de ORDER BY/LIMIT no SQL.
     const { rows } = await this.pool.query<PagamentoRow>(
       `SELECT * FROM pagamentos ${clause}${lock ? ' FOR UPDATE' : ''}`,

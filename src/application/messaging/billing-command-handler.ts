@@ -8,7 +8,11 @@ import { IPagamentoRepository } from '@domain/repositories/pagamento.repository'
 import { INotificationService } from '@domain/services/notification.service';
 import { IPaymentGateway } from '@domain/services/payment-gateway';
 import { IUnitOfWork } from '@domain/services/unit-of-work';
-import { InvalidMessageError, PaymentGatewayError, ValidationError } from '@shared/errors/domain.error';
+import {
+  InvalidMessageError,
+  PaymentGatewayError,
+  ValidationError,
+} from '@shared/errors/domain.error';
 import { Envelope } from '@shared/messaging/envelope';
 import {
   CancelarOrcamentoPayload,
@@ -17,7 +21,6 @@ import {
   SolicitarPagamentoPayload,
 } from '@shared/messaging/messages';
 import { logger } from '@shared/logger';
-
 
 const VERSAO_SUPORTADA = 1;
 
@@ -185,7 +188,10 @@ export class BillingCommandHandler {
         : await this.d.orcamentos.findByOrdemServicoId(osId, true);
       const orcamento = encontrado && encontrado.ordemServicoId === osId ? encontrado : null;
 
-      if (orcamento && [OrcamentoStatus.GERADO, OrcamentoStatus.APROVADO].includes(orcamento.status)) {
+      if (
+        orcamento &&
+        [OrcamentoStatus.GERADO, OrcamentoStatus.APROVADO].includes(orcamento.status)
+      ) {
         orcamento.cancelar(p.motivo ?? 'Cancelado pela Saga', this.clock());
         await this.d.orcamentos.update(orcamento);
         // Link de pagamento ainda aberto deixa de valer. Se o cliente pagar mesmo assim,
@@ -230,7 +236,9 @@ export class BillingCommandHandler {
       return;
     }
     if (orcamento.status !== OrcamentoStatus.APROVADO) {
-      await this.transacao(env, () => recusa(`Orçamento ${orcamento.status}: pagamento não permitido`));
+      await this.transacao(env, () =>
+        recusa(`Orçamento ${orcamento.status}: pagamento não permitido`),
+      );
       return;
     }
 
@@ -255,18 +263,25 @@ export class BillingCommandHandler {
       if (ativo) {
         // Reenvio, ou outro comando já criou: repete a resposta adequada ao estado.
         if (ativo.status === PagamentoStatus.CONFIRMADO) {
-          return publicarEvento(this.d.outbox, 'PagamentoConfirmado', env.sagaId, env.correlationId, {
-            ordemServicoId: osId,
-            orcamentoId: ativo.orcamentoId,
-            pagamentoId: ativo.id,
-            mpPaymentId: ativo.mpPaymentId ?? '',
-            valor: ativo.valor,
-            confirmadoEm: (ativo.confirmadoEm ?? this.clock()).toISOString(),
-          });
+          return publicarEvento(
+            this.d.outbox,
+            'PagamentoConfirmado',
+            env.sagaId,
+            env.correlationId,
+            {
+              ordemServicoId: osId,
+              orcamentoId: ativo.orcamentoId,
+              pagamentoId: ativo.id,
+              mpPaymentId: ativo.mpPaymentId ?? '',
+              valor: ativo.valor,
+              confirmadoEm: (ativo.confirmadoEm ?? this.clock()).toISOString(),
+            },
+          );
         }
         return solicitado(ativo);
       }
-      if (!preferencia) throw new Error('Pagamento ativo desapareceu entre as leituras; reentregar');
+      if (!preferencia)
+        throw new Error('Pagamento ativo desapareceu entre as leituras; reentregar');
       const pagamento = Pagamento.criar(
         {
           orcamentoId: orcamento.id,
@@ -311,16 +326,24 @@ export class BillingCommandHandler {
       return;
     }
     if (pagamento.status !== PagamentoStatus.CONFIRMADO || !pagamento.mpPaymentId) {
-      await this.transacao(env, () => falha(`Pagamento ${pagamento.status}: não há o que estornar`));
+      await this.transacao(env, () =>
+        falha(`Pagamento ${pagamento.status}: não há o que estornar`),
+      );
       return;
     }
 
     let refundId: string;
     try {
-      ({ refundId } = await this.d.gateway.estornar(pagamento.mpPaymentId, `estorno-${pagamento.id}`));
+      ({ refundId } = await this.d.gateway.estornar(
+        pagamento.mpPaymentId,
+        `estorno-${pagamento.id}`,
+      ));
     } catch (error) {
       if (!(error instanceof PaymentGatewayError)) throw error;
-      logger.warn({ error: error.message, pagamentoId: pagamento.id }, 'Estorno recusado pelo gateway');
+      logger.warn(
+        { error: error.message, pagamentoId: pagamento.id },
+        'Estorno recusado pelo gateway',
+      );
       await this.transacao(env, () => falha(error.message));
       return;
     }
@@ -336,4 +359,3 @@ export class BillingCommandHandler {
     });
   }
 }
-
