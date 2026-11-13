@@ -52,10 +52,13 @@ describePg('Billing × PostgreSQL', () => {
     await admin.query(`CREATE SCHEMA ${schema}`);
     await admin.end();
     const withSchema = `${url}${url!.includes('?') ? '&' : '?'}options=-c%20search_path%3D${schema}`;
-    execSync('npx node-pg-migrate up -m src/infrastructure/database/postgres/migrations', {
-      env: { ...process.env, DATABASE_URL: withSchema },
-      stdio: 'pipe',
-    });
+    execSync(
+      `npx node-pg-migrate up -m src/infrastructure/database/postgres/migrations --schema ${schema}`,
+      {
+        env: { ...process.env, DATABASE_URL: url },
+        stdio: 'pipe',
+      },
+    );
     pool = new Pool({ connectionString: withSchema });
     setPool(pool);
   }, 120_000);
