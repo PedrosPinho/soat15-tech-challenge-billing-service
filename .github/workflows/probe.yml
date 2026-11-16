@@ -1,0 +1,9 @@
+name: Probe
+on:
+  pull_request:
+    branches: [homolog]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
