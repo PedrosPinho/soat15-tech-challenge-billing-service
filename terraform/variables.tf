@@ -32,5 +32,5 @@ variable "visibility_timeout_seconds" {
 variable "tfstate_bucket" {
   description = "Bucket do estado remoto (bootstrap da Fase 3); usado para ler as saídas do OS Service"
   type        = string
-  default     = "soat15-tc-tfstate-442534931336"
+  default     = "soat15-tc-tfstate-368596537549"
 }
