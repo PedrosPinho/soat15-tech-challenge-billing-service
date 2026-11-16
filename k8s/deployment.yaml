@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-service
+  namespace: oficina
+  labels:
+    app: billing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billing-service
+  template:
+    metadata:
+      labels:
+        app: billing-service
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: billing-service
+          # Substituída em tempo de deploy pelo CI/CD (sed na tag do ECR = SHA do commit).
+          image: billing-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3001
+          envFrom:
+            - configMapRef:
+                name: billing-service-config
+            # BILLING_COMMANDS_QUEUE_URL e EVENTS_TOPIC_ARN — criado pelo CI a partir das saídas do Terraform
+            - configMapRef:
+                name: billing-service-messaging
+            - secretRef:
+                name: billing-service-secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+              ephemeral-storage: "512Mi"
+          readinessProbe:
+            # Consulta o PostgreSQL: se estiver inalcançável, só tira o pod do Service.
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            # /health/live nunca toca dependências — reiniciar o pod não resolve problema de banco.
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3

@@ -1,0 +1,137 @@
+[
+  {
+    "messageId": "<uuid-1>",
+    "type": "OrcamentoGerado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "<uuid-2>",
+      "valorTotal": 610,
+      "validadeAte": "2026-11-18T12:00:00.000Z"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "OrcamentoAprovado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "<uuid-3>",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "<uuid-2>",
+      "aprovadoEm": "2026-11-12T10:00:00.000Z"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "PagamentoSolicitado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "<uuid-2>",
+      "pagamentoId": "<uuid-4>",
+      "initPoint": "https://fake.mercadopago.test/checkout/pref-1",
+      "expiraEm": "2026-11-12T11:00:00.000Z"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "PagamentoConfirmado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "<uuid-5>",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "<uuid-2>",
+      "pagamentoId": "<uuid-4>",
+      "mpPaymentId": "mp-1",
+      "valor": 610,
+      "confirmadoEm": "2026-11-12T10:00:00.000Z"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "PagamentoEstornado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "pagamentoId": "<uuid-4>",
+      "mpRefundId": "refund-2"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "OrcamentoCancelado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-1",
+      "orcamentoId": "<uuid-2>"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "OrcamentoRecusado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "<uuid-6>",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-2",
+      "orcamentoId": "<uuid-7>",
+      "motivo": "caro"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "PagamentoRecusado",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "<uuid-8>",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-3",
+      "orcamentoId": "<uuid-9>",
+      "pagamentoId": "<uuid-10>",
+      "motivo": "rejected"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "EstornoFalhou",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-4",
+      "pagamentoId": "<uuid-11>",
+      "motivo": "MP fora do ar"
+    }
+  },
+  {
+    "messageId": "<uuid-1>",
+    "type": "OrcamentoFalhou",
+    "version": 1,
+    "sagaId": "<uuid-1>",
+    "correlationId": "corr-1",
+    "occurredAt": "2026-01-01T00:00:00.000Z",
+    "payload": {
+      "ordemServicoId": "os-5",
+      "motivo": "valorTotal (1) não confere com a soma dos itens (610)"
+    }
+  }
+]
