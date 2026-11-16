@@ -1,0 +1,74 @@
+name: Destroy (manual)
+
+# Disciplina de custo do Learner Lab -- nunca dispara sozinho, só via "Run workflow".
+# Destrói a infraestrutura DESTE serviço (Billing Service): fila(s)/DLQ, ECR e, antes, os workloads do
+# cluster (Ingress primeiro: o AWS Load Balancer Controller só remove o ALB interno compartilhado
+# e suas ENIs quando o último Ingress do grupo some -- ALB órfão trava o destroy da VPC no db-infra).
+#
+# Ordem correta de destruição da Fase 4 (inversa do deploy):
+#   billing-service e execution-service  ->  OS Service (dono do SNS; os dois leem o estado dele)
+#   ->  auth-lambda  ->  k8s-infra  ->  db-infra
+# (o auth-lambda lê o ALB e o k8s-infra a VPC; ver destroy.yml de cada repositório.)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite "destroy" para confirmar'
+        required: true
+      workspace:
+        description: 'Workspace do Terraform a destruir'
+        required: true
+        default: 'homolog'
+      delete_workloads:
+        description: 'Remover antes os workloads do cluster (Ingress, Deployment, Service, HPA, Jobs)?'
+        required: true
+        default: 'true'
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: soat15-tc-cluster
+  TF_VERSION: "1.9.5"
+
+jobs:
+  destroy:
+    name: Destroy
+    if: github.event.inputs.confirm == 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Remover workloads do cluster (Ingress primeiro)
+        if: github.event.inputs.delete_workloads == 'true'
+        # Tolerante: cluster/namespace podem já não existir (ex.: k8s-infra destruído antes).
+        run: |
+          aws eks update-kubeconfig --name "${{ env.EKS_CLUSTER_NAME }}" --region "${{ env.AWS_REGION }}" || { echo "cluster indisponível: nada a remover"; exit 0; }
+          NS="oficina-${{ github.event.inputs.workspace }}"
+          kubectl delete ingress/billing-service -n "$NS" --ignore-not-found --timeout=120s || true
+          kubectl delete hpa/billing-service deployment/billing-service service/billing-service -n "$NS" --ignore-not-found --timeout=120s || true
+          kubectl delete job billing-service-migrate -n "$NS" --ignore-not-found --timeout=120s || true
+          kubectl delete configmap billing-service-config billing-service-messaging -n "$NS" --ignore-not-found || true
+          kubectl delete secret billing-service-secret -n "$NS" --ignore-not-found || true
+
+      - run: terraform init
+        working-directory: terraform
+
+      - run: terraform workspace select "${{ github.event.inputs.workspace }}"
+        working-directory: terraform
+
+      - run: terraform destroy -auto-approve -input=false
+        working-directory: terraform
