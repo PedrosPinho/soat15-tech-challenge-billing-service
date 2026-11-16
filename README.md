@@ -114,13 +114,13 @@ Testes: `npm test` · cobertura: `npm run test:coverage` (threshold 80%) · lint
 - Jobs de infraestrutura: `terraform-validate` (fmt + validate), `terraform-apply` (ECR e fila `billing-commands` + DLQ; `apply` só em `homolog`, `plan` em `main` — ADR-007), `docker-build-push` (ECR) e `deploy` (EKS, com Job de migration). SonarCloud entra na Etapa 8.
 - `tests/integration.postgres.spec.ts` roda contra PostgreSQL real (service container no CI; localmente defina `TEST_DATABASE_URL`).
 - Infra do serviço em [`terraform/`](terraform) e manifests em [`k8s/`](k8s). Requer o `apply` prévio do OS Service (dono do tópico `oficina-eventos`) e o bootstrap do banco `oficina_billing` (Etapa 5).
-- Evidência de cobertura: _a preencher_ (badge SonarCloud + relatório do CI).
+- Evidência de cobertura: _a preencher_ (quality gate do SonarQube local (`../soat15-tech-challenge-01/scripts/sonar-local.sh`) + relatório do CI).
 - `main` e `homolog` protegidas: PR obrigatório e status checks `Build`, `Test` e `Sonar` (`scripts/protect-branches.sh` no repo do OS Service aplica). `destroy.yml` (manual) remove workloads e infra do serviço.
 
 ## Cobertura e documentação da API
 
 - **Cobertura**: 99,6 % de linhas · 92,9 % de branches · 97,5 % de funções (`npm run test:coverage`, sem os testes de integração
-  que exigem Postgres/LocalStack; mínimo exigido 80 %). O CI publica o relatório e o SonarCloud aplica o quality gate
+  que exigem Postgres/LocalStack; mínimo exigido 80 %). O CI publica o relatório e o SonarQube local (`scripts/sonar-local.sh` do repo OS) aplica o quality gate
   (badge no repositório do OS Service).
 - **Contratos**: `tests/contracts/` — este serviço consome os comandos reais do OS (`os-commands.json`) e produz os eventos
   que o OS consome (`billing-events.json`); ver o README do OS Service, seção Testes.
